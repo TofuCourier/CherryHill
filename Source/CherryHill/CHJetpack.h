@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "CHJetpack.generated.h"
 
+class ACherryHillCharacter;
+
 UCLASS()
 class CHERRYHILL_API ACHJetpack : public AActor
 {
@@ -15,29 +17,44 @@ public:
 	// Sets default values for this actor's properties
 	ACHJetpack();
 
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FlyMappingContext;
-
-	/** Fire Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* ThrustAction;
+	
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float ThrustAccel = 2500.0f;
+	UPROPERTY()
+	ACherryHillCharacter* OwningCharacter = nullptr;
+
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	class UInputMappingContext* FlyMappingContext;
+
+	/** Thrust Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	class UInputAction* ThrustUpAction;
+
+	/** Thrust Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	class UInputAction* ThrustDownAction;
+
+	/** Thrust Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	class UInputAction* ThrustBoostAction;
+
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float MaxThrust = 1000.0f;
+	float ThrustAccel = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float JetpackRampUpSpeed = 500.0f; // how fast thrust builds up
+	float MaxThrust = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float DefaultThrust = 500.0f; // how fast thrust builds up
+	float LaunchSpeed; // how fast thrust builds up
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
+	float DefaultThrust = 50.0f; // flying speed??? flying speed is 600
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bJetpackActive = false;
@@ -61,6 +78,39 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void SwitchToFlying();
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	void AttachJetpack(ACharacter* TargetCharacter);
+
+	UFUNCTION()
+	void OnJetpackActivate(AActor* IntigatorActor, bool bIsJetpackThrusting);
+
+	void ThrustUp();
+
+	void ThrustBounce();
+
+	void NoThrust();
+
+	void ThrustDown();
+
+	void ThrustBoost();
+
+
+
+
+
+	bool bIsStabilizing = false;
+
+float HoverTargetZ = 0.0f; // Set when launching
+float StabilizeVelocity = 0.0f;
+
+UPROPERTY(EditAnywhere)
+float SpringStrength = 10.0f;
+
+UPROPERTY(EditAnywhere)
+float SpringDamping = 2.0f;
+
+float HoverTime = 0.0;
+
+
 
 };

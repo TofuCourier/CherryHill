@@ -69,6 +69,9 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnJetpackActivate OnJetpackActivate;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Jetpack")
+	TSubclassOf<ACHJetpack> JetpackClass;
+
 protected:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -85,8 +88,6 @@ protected:
 
 	void JetPackThrust();
 
-	UPROPERTY(EditDefaultsOnly, Category = "Jetpack")
-	TSubclassOf<ACHJetpack> JetpackClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
 	float ThrustAccel = 2500.0f;
@@ -110,13 +111,8 @@ protected:
 	bool bHasJumped = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsThrusting = false;
-
-	bool bBoundAction = false;
-
 	float CurrentThrust = 0.f;
 
-	bool bWasThrustingLastFrame = false;
 
 protected:
 	// APawn interface
@@ -132,3 +128,55 @@ public:
 
 };
 
+//float HoverTime = 0.0;
+//
+//if (bIsStabilizing)
+//{
+//	FVector Location = OwningCharacter->GetActorLocation();
+//	float CurrentZ = Location.Z;
+//
+//	// Spring force toward target
+//	float Displacement = HoverTargetZ - CurrentZ;
+//
+//	// Apply spring-damper force: F = kx - cv
+//	float SpringAccel = (Displacement * SpringStrength) - (StabilizeVelocity * SpringDamping);
+//
+//	// Integrate velocity
+//	StabilizeVelocity += SpringAccel * GetWorld()->GetDeltaSeconds();
+//
+//	StabilizeVelocity = FMath::Clamp(StabilizeVelocity, -4000.0f, 4000.0f);
+//
+//	// Apply to position
+//	Location.Z += StabilizeVelocity * GetWorld()->GetDeltaSeconds();
+//	OwningCharacter->SetActorLocation(Location);
+//
+//	// End stabilization once close enough and velocity is low
+//	if (FMath::Abs(Displacement) < 1.0f && FMath::Abs(StabilizeVelocity) < 5.0f)
+//	{
+//		bIsStabilizing = false;
+//		HoverTime = 0.0f; // start bobbing clean
+//		StabilizeVelocity = 0.0f;
+//		return; // Skip hover bobbing until stabilized
+//	}
+//
+//	UE_LOG(LogTemp, Warning, TEXT("Displacement = %f"), Displacement);
+//	UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity = %f"), OwningCharacter->GetCharacterMovement()->Velocity.Z);
+//
+//}
+//
+//float HoverAmplitude = 10.0f; // How strong the bob is
+//float HoverFrequency = 2.0f;
+//
+//if (bIsFlying && !bIsThrusting)
+//{
+//	HoverTime += GetWorld()->GetDeltaSeconds();
+//
+//	// Calculate bobbing offset
+//	float BobOffset = FMath::Sin(HoverTime * HoverFrequency) * HoverAmplitude;
+//
+//	// Apply bobbing to velocity
+//	FVector Velocity = OwningCharacter->GetVelocity();
+//	Velocity.Z = BobOffset;
+//	OwningCharacter->GetCharacterMovement()->Velocity = Velocity;
+//	//UE_LOG(LogTemp, Warning, TEXT("velocity = %f"), BobOffset);
+//}

@@ -16,6 +16,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "CHJetpack.h"
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -126,14 +127,29 @@ void ACherryHillCharacter::Interact(const FInputActionValue& Value)
 
 void ACherryHillCharacter::StartJumpOrFly()
 {
+	// Check if walking on ground to reset values
+	if (GetCharacterMovement()->IsMovingOnGround())
+	{
+		bHasJumped = false;
+		bIsFlying = false;
+		//bIsThrusting = false;
+		CurrentThrust = 0.f;
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	}
+
 	// Step 1: Jump from ground
-	if (!bHasJumped && !bIsFlying)
+	if (!bHasJumped && GetCharacterMovement()->IsMovingOnGround())
 	{
 		Jump();
 		bHasJumped = true;
 	}
+
+	if (!JetpackClass)
+	{
+		return;
+	}
 	// Step 2: If in air and not flying yet, activate flying and thrust
-	else if (bHasJumped && !bIsFlying)
+	else if (bHasJumped && !GetCharacterMovement()->IsMovingOnGround())
 	{
 		bHasJumped = false;
 		bIsFlying = true;
@@ -141,85 +157,26 @@ void ACherryHillCharacter::StartJumpOrFly()
 		CurrentThrust = 0.f;
 		UE_LOG(LogTemp, Warning, TEXT("Jetpack engaged!"));
 
-		if (!bBoundAction)
-		{
-			if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(GetController()->InputComponent))
-			{
+		OnJetpackActivate.Broadcast(this, true);
 
-				// Fire
-				EnhancedInputComponent->BindAction(JumpOrFlyAction, ETriggerEvent::Triggered, this, &ACherryHillCharacter::JetPackThrust);
-				bBoundAction = true;
-				EnhancedInputComponent->BindAction(JumpOrFlyAction, ETriggerEvent::Completed, this, &ACherryHillCharacter::StopJumpOrFly);
-				JetPackThrust();
-			}
-		}
 	}
-	// Step 3: If already flying, start thrusting up
-	//else if (bIsFlying)
-	//{
-	//	JetPackThrust();
-	//}
 }
 
 void ACherryHillCharacter::StopJumpOrFly() // More like stop thrusting while flying
 {
-	if (bIsThrusting)
-	{
-  		bIsThrusting = false;
-		UE_LOG(LogTemp, Warning, TEXT("stopped Thrusting"));
-		bWasThrustingLastFrame = true;
-	}
+
 
 }
 
 void ACherryHillCharacter::JetPackThrust()
 {
-	ActionComp->StartActionByName(this, "Thrust");
-	bIsThrusting = true;
+
 	
 }
 
 void ACherryHillCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-
-	// Reset jump if we land
-	if (GetCharacterMovement()->IsMovingOnGround())
-	{
-		bHasJumped = false;
-		bIsFlying = false;
-		bIsThrusting = false;
-		CurrentThrust = 0.f;
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-	}
-
-	// Give a small upward bounce
-	if (bWasThrustingLastFrame && !bIsThrusting)
-	{
-		FVector CurrentVelocity = GetCharacterMovement()->Velocity;
-		CurrentVelocity.Z = FMath::Clamp(CurrentVelocity.Z, CurrentVelocity.Z, MaxThrust);
-		GetCharacterMovement()->Velocity = CurrentVelocity;
-
-		UE_LOG(LogTemp, Warning, TEXT("Jetpack bounce!"));
-		bWasThrustingLastFrame = false;
-	}
-
-	// Slowly decrease vertical velocity (simulate light descent)
-	if (bIsFlying && !bIsThrusting)
-	{
-		FVector CurrentVelocity = GetCharacterMovement()->Velocity;
-
-		float FallRate = -40.0f; // adjust for how quickly they descend
-
-		float NewVelocity = FallRate * DeltaSeconds;
-
-		CurrentVelocity.Z += NewVelocity;
-		CurrentVelocity.Z = FMath::Clamp(CurrentVelocity.Z, FallRate, MaxThrust);
-
-		GetCharacterMovement()->Velocity = CurrentVelocity;
-		UE_LOG(LogTemp, Warning, TEXT("velocity = %f"), CurrentVelocity.Z);
-	}
 
 
 }
