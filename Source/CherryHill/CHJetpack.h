@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "CHJetpack.generated.h"
 
+class UInputAction;
+class UInputMappingContext;
 class ACherryHillCharacter;
 
 UCLASS()
@@ -14,47 +16,76 @@ class CHERRYHILL_API ACHJetpack : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
+
 	ACHJetpack();
 
-	
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Dampen")
+	float SpringStrength = 10.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Dampen")
+	float SpringDamping = 2.0f;
+
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
+	float BoostCharge = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
+	float MaxBoostCharge = 1.5f; // seconds to max
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
+	float BoostStrengthMax = 2000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
+	float BoostStrengthMin = 300.0f;
+
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
+	float HoverAmplitude = 40.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
+	float HoverFrequency = 4.0f;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
+	float ThrustAccel = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
+	float MaxThrust = 20.0f;
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 
 	UPROPERTY()
 	ACherryHillCharacter* OwningCharacter = nullptr;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FlyMappingContext;
+	UInputMappingContext* FlyMappingContext;
 
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* ThrustUpAction;
+	UInputAction* ThrustUpAction;
 
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* ThrustDownAction;
+	UInputAction* ThrustDownAction;
 
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* ThrustBoostAction;
+	UInputAction* ThrustBoostAction;
 
+	/** Deactivate Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* DeactivateJetpackAction;
 
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float ThrustAccel = 10.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float MaxThrust = 20.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
 	float LaunchSpeed; // how fast thrust builds up
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
 	float DefaultThrust = 50.0f; // flying speed??? flying speed is 600
+
+
+
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bJetpackActive = false;
@@ -68,15 +99,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsThrusting = false;
 
-	bool bBoundAction = false;
+	bool bIsStabilizing = false;
 
-	float CurrentThrust = 0.f;
+	float HoverTargetZ = 0.0f; // Set when launching
 
-	bool bWasThrustingLastFrame = false;
+	float StabilizeVelocity = 0.0f;
+
+	float HoverTime = 0.0;
+
+	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
 
 	UFUNCTION(BlueprintCallable, Category = "JetPack")
 	void AttachJetpack(ACharacter* TargetCharacter);
@@ -84,32 +118,24 @@ public:
 	UFUNCTION()
 	void OnJetpackActivate(AActor* IntigatorActor, bool bIsJetpackThrusting);
 
+	void JetpackDeactivate();
+
 	void ThrustUp();
 
-	void ThrustBounce();
+	void ThrustRelease();
 
-	void NoThrust();
+	void ThrustToHover();
 
 	void ThrustDown();
 
 	void ThrustBoost();
 
+	void Hover();
+
+	virtual void Tick(float DeltaTime) override;
 
 
 
-
-	bool bIsStabilizing = false;
-
-float HoverTargetZ = 0.0f; // Set when launching
-float StabilizeVelocity = 0.0f;
-
-UPROPERTY(EditAnywhere)
-float SpringStrength = 10.0f;
-
-UPROPERTY(EditAnywhere)
-float SpringDamping = 2.0f;
-
-float HoverTime = 0.0;
 
 
 

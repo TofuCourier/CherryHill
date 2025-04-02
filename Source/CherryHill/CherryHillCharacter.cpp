@@ -72,9 +72,8 @@ void ACherryHillCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		// Jumping
+		// Jumping  &&  Activate Jetpack
 		EnhancedInputComponent->BindAction(JumpOrFlyAction, ETriggerEvent::Started, this, &ACherryHillCharacter::StartJumpOrFly);
-		//EnhancedInputComponent->BindAction(JumpOrFlyAction, ETriggerEvent::Started, this, &ACherryHillCharacter::StopJumpOrFly);
 
 		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACherryHillCharacter::Move);
@@ -82,6 +81,7 @@ void ACherryHillCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACherryHillCharacter::Look);
 
+		// Interact
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &ACherryHillCharacter::Interact);
 	}
 	else
@@ -127,38 +127,37 @@ void ACherryHillCharacter::Interact(const FInputActionValue& Value)
 
 void ACherryHillCharacter::StartJumpOrFly()
 {
-	// Check if walking on ground to reset values
+	//	Check if walking on ground to reset values
 	if (GetCharacterMovement()->IsMovingOnGround())
 	{
 		bHasJumped = false;
 		bIsFlying = false;
 		//bIsThrusting = false;
-		CurrentThrust = 0.f;
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
 
-	// Step 1: Jump from ground
+	//	Jump from ground
 	if (!bHasJumped && GetCharacterMovement()->IsMovingOnGround())
 	{
 		Jump();
 		bHasJumped = true;
 	}
 
+	//	Check if we have Jetpack Class to advance onto flying
 	if (!JetpackClass)
 	{
 		return;
 	}
-	// Step 2: If in air and not flying yet, activate flying and thrust
+
+	//	If in air and not flying yet, activate flying
 	else if (bHasJumped && !GetCharacterMovement()->IsMovingOnGround())
 	{
 		bHasJumped = false;
 		bIsFlying = true;
 		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-		CurrentThrust = 0.f;
 		UE_LOG(LogTemp, Warning, TEXT("Jetpack engaged!"));
 
 		OnJetpackActivate.Broadcast(this, true);
-
 	}
 }
 
@@ -168,16 +167,9 @@ void ACherryHillCharacter::StopJumpOrFly() // More like stop thrusting while fly
 
 }
 
-void ACherryHillCharacter::JetPackThrust()
-{
-
-	
-}
 
 void ACherryHillCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-
 }
 

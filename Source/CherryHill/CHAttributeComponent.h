@@ -8,41 +8,22 @@
 
 
 USTRUCT(BlueprintType)
-struct FAttributes
+struct FAttribute
 {
 	GENERATED_BODY()
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float Hunger;
+	float CurrentValue;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float MaxHunger;
+	float MaxValue;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float HungerDecay;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float Toilet;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float MaxToilet;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float ToiletDecay;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float Sleep;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float MaxSleep;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
-	float SleepDecay;
-
+	float DecayValue;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnAttributeChange, AActor*, InstigatorActor, UCHAttributeComponent*, OwningComp,  FAttributes, Attributes);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAttributeChange, AActor*, InstigatorActor, UCHAttributeComponent*, OwningComp);
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -56,21 +37,19 @@ public:
 
 	// Allows easy access to get the attributes from a specific character
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	static UCHAttributeComponent* GetAttributes(AActor* FromActor);
+	static TMap<FName, FAttribute> GetAttributes(AActor* FromActor);
 
 
 protected:
 
-	FTimerHandle TimerHandle_AttributeDecay;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Attributes")
 	float DecayTimerInterval;
 
+	FTimerHandle TimerHandle_AttributeDecay;
 	void AttributeDecay();
 
 	UFUNCTION()
 	void AttributeDecayTimerElapsed();
-
 
 	virtual void BeginPlay() override;
 
@@ -80,8 +59,14 @@ public:
 	FOnAttributeChange OnAttributeChange;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
-	FAttributes Attributes;
+	TMap<FName, FAttribute> Attributes;
 
 	UFUNCTION(BlueprintCallable)
-	void IncreaseHungerValue(float Value);
+	void AddAttribute(FName Name, float Value, float MaxValue, float DecayValue);
+	
+	UFUNCTION(BlueprintCallable)
+	void RemoveAttribute(FName Name);
+
+	UFUNCTION(BlueprintCallable)
+	void IncreaseAttributeValue(FName Name, float Value);
 };

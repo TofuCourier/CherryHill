@@ -6,32 +6,20 @@
 
 UCHAttributeComponent::UCHAttributeComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	Attributes.MaxHunger = 100.0f;
-	Attributes.Hunger = Attributes.MaxHunger;
-	Attributes.HungerDecay = -1.0f;
-
-	Attributes.MaxToilet = 100.0f;
-	Attributes.Toilet = Attributes.MaxToilet;
-	Attributes.ToiletDecay = -2.0f;
-
-	Attributes.MaxSleep = 100.0f;
-	Attributes.Sleep = Attributes.MaxSleep;
-	Attributes.SleepDecay = -0.5f;
 
 	DecayTimerInterval = 5.0f;
 }
 
-UCHAttributeComponent* UCHAttributeComponent::GetAttributes(AActor* FromActor)
+TMap<FName, FAttribute> UCHAttributeComponent::GetAttributes(AActor* FromActor)
 {
 	if (FromActor)
 	{
-		return Cast<UCHAttributeComponent>(FromActor->GetComponentByClass(UCHAttributeComponent::StaticClass()));
+		UCHAttributeComponent* Comp = FromActor->FindComponentByClass<UCHAttributeComponent>();
+		return Comp->Attributes;
 	}
-	return nullptr;
+
+	return TMap<FName, FAttribute>();
 }
 
 void UCHAttributeComponent::BeginPlay()
@@ -46,20 +34,54 @@ void UCHAttributeComponent::AttributeDecayTimerElapsed()
 {
 	AttributeDecay();
 
-	OnAttributeChange.Broadcast(GetOwner(), this, Attributes);
+	OnAttributeChange.Broadcast(GetOwner(), this);
 }
 
 void UCHAttributeComponent::AttributeDecay()
 {
-	Attributes.Hunger += Attributes.HungerDecay;
-	Attributes.Toilet += Attributes.ToiletDecay;
-	Attributes.Sleep += Attributes.SleepDecay;
+	for (TPair<FName, FAttribute>& AttributePair : Attributes)
+	{
+		FAttribute& Attribute = AttributePair.Value;
+
+		Attribute.CurrentValue += Attribute.DecayValue;
+
+		// Maybe add a clamp? to the value when reaching 0?
+	}
 
 }
 
-void UCHAttributeComponent::IncreaseHungerValue(float Value)
-{
-	Attributes.Hunger = FMath::Clamp(Attributes.Hunger + Value, 0.0f, Attributes.MaxHunger);
 
-	OnAttributeChange.Broadcast(GetOwner(), this, Attributes);
+void UCHAttributeComponent::AddAttribute(FName Name, float Value = 100.0f, float MaxValue = 100.0f, float DecayValue = -1.0f)
+{
+	if (Attributes.Contains(Name))
+	{
+		return;
+	}
+
+	FAttribute NewAttributeStats;
+	NewAttributeStats.CurrentValue = Value;
+	NewAttributeStats.MaxValue = MaxValue;
+	NewAttributeStats.DecayValue = DecayValue;
+
+	Attributes.Add(Name, NewAttributeStats);
+
+}
+
+void UCHAttributeComponent::RemoveAttribute(FName Name)
+{
+	if (!Attributes.Contains(Name))
+	{
+		return;
+	}
+
+	Attributes.Remove(Name);
+}
+
+// TO BE FIXED ?
+void UCHAttributeComponent::IncreaseAttributeValue(FName Name, float Value)
+{
+	if (Attributes.Contains(Name))
+	{
+		Attributes[Name].CurrentValue = FMath::Clamp(Attributes[Name].CurrentValue + Value, 0.0f, Attributes[Name].MaxValue);
+	}
 }
