@@ -20,6 +20,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "CHCharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -48,6 +49,12 @@ ACherryHillCharacter::ACherryHillCharacter()
 	InteractionComp = CreateDefaultSubobject<UCHInteractionComponent>(TEXT("InterationComp"));
 
 	ActionComp = CreateDefaultSubobject<UCHActionComponent>(TEXT("ActionComp"));
+
+}
+
+ACherryHillCharacter::ACherryHillCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UCHCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+{
 
 }
 
@@ -131,8 +138,7 @@ void ACherryHillCharacter::StartJumpOrFly()
 	if (GetCharacterMovement()->IsMovingOnGround())
 	{
 		bHasJumped = false;
-		bIsFlying = false;
-		//bIsThrusting = false;
+		bJetpackActive = false;
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	}
 
@@ -144,29 +150,19 @@ void ACherryHillCharacter::StartJumpOrFly()
 	}
 
 	//	Check if we have Jetpack Class to advance onto flying
-	if (!JetpackClass)
-	{
-		return;
-	}
+	if (!MyJetpack) return;
 
 	//	If in air and not flying yet, activate flying
-	else if (bHasJumped && !GetCharacterMovement()->IsMovingOnGround())
+	else if (!GetCharacterMovement()->IsMovingOnGround())
 	{
 		bHasJumped = false;
-		bIsFlying = true;
+		bJetpackActive = true;
 		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 		UE_LOG(LogTemp, Warning, TEXT("Jetpack engaged!"));
-
-		OnJetpackActivate.Broadcast(this, true);
+		
+		OnJetpackActivate.Broadcast(this, MyJetpack, true);
 	}
 }
-
-void ACherryHillCharacter::StopJumpOrFly() // More like stop thrusting while flying
-{
-
-
-}
-
 
 void ACherryHillCharacter::Tick(float DeltaSeconds)
 {

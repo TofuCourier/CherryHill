@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+
 #include "CHAttributeComponent.generated.h"
+
 
 
 USTRUCT(BlueprintType)
@@ -21,6 +23,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attributes")
 	float DecayValue;
+
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAttributeChange, AActor*, InstigatorActor, UCHAttributeComponent*, OwningComp);
@@ -37,19 +40,13 @@ public:
 
 	// Allows easy access to get the attributes from a specific character
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	static TMap<FName, FAttribute> GetAttributes(AActor* FromActor);
+	static TMap<FName, FAttribute> GetAttributes(AActor* FromActor, UCHAttributeComponent*& OutComponent);
 
 
 protected:
 
-	UPROPERTY(EditDefaultsOnly, Category = "Attributes")
-	float DecayTimerInterval;
-
-	FTimerHandle TimerHandle_AttributeDecay;
-	void AttributeDecay();
-
-	UFUNCTION()
-	void AttributeDecayTimerElapsed();
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void AttributeDecay(bool bDecayActive);
 
 	virtual void BeginPlay() override;
 
@@ -61,12 +58,32 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attributes")
 	TMap<FName, FAttribute> Attributes;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	void AddAttribute(FName Name, float Value, float MaxValue, float DecayValue);
 	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	void RemoveAttribute(FName Name);
 
-	UFUNCTION(BlueprintCallable)
-	void IncreaseAttributeValue(FName Name, float Value);
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void IncreaseAttributeCurrentValue(FName Name, float Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void IncreaseAttributeDecayValue(FName Name, float Value);
+
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	void SetTimerDecayActive(bool Activate) { bDecayActivate = Activate; }
+
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Attributes")
+	bool bDecayActivate;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Attributes")
+	float DecayTimerInterval;
+
+	FTimerHandle TimerHandle_AttributeDecay;
+
+	UFUNCTION()
+	void AttributeDecayTimerElapsed();
 };

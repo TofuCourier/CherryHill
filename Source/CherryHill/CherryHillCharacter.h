@@ -17,7 +17,7 @@ class UCHActionComponent;
 class ACHJetpack;
 struct FInputActionValue;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnJetpackActivate, AActor*, InstigatorActor, bool, bIsJetpackThrusting); // NEED TO ADD ATTRIBUTES FOR FUEL ETC.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnJetpackActivate, AActor*, InstigatorActor, ACHJetpack*, OwningJetpack, bool, bIsJetpackThrusting); // NEED TO ADD ATTRIBUTES FOR FUEL ETC.
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -64,13 +64,14 @@ class ACherryHillCharacter : public ACharacter
 public:
 	ACherryHillCharacter();
 
-	virtual void Tick(float DeltaSeconds) override;
+	ACherryHillCharacter(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(BlueprintAssignable)
+
+	UPROPERTY(BlueprintAssignable, Category = "Jetpack")
 	FOnJetpackActivate OnJetpackActivate;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Jetpack")
-	TSubclassOf<ACHJetpack> JetpackClass;
+	ACHJetpack* MyJetpack;
 
 protected:
 	/** Called for movement input */
@@ -82,10 +83,8 @@ protected:
 	/** Called for Interact input */
 	void Interact(const FInputActionValue& Value);
 
+	/** Called for Jump/Fly input */
 	void StartJumpOrFly();
-
-	void StopJumpOrFly();
-
 
 
 	UPROPERTY(BlueprintReadWrite)
@@ -107,7 +106,12 @@ protected:
 public:
 	/** Returns Mesh1P subobject **/
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
+
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	/** Returns whether the characters Jetpack is active **/
+	inline bool IsJetpackActive() { return bJetpackActive; }
+
+	virtual void Tick(float DeltaSeconds) override;
 };

@@ -3,6 +3,7 @@
 
 #include "CHAttributeComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Templates/Tuple.h"
 
 UCHAttributeComponent::UCHAttributeComponent()
 {
@@ -11,14 +12,16 @@ UCHAttributeComponent::UCHAttributeComponent()
 	DecayTimerInterval = 5.0f;
 }
 
-TMap<FName, FAttribute> UCHAttributeComponent::GetAttributes(AActor* FromActor)
+TMap<FName, FAttribute> UCHAttributeComponent::GetAttributes(AActor* FromActor, UCHAttributeComponent*& OutComponent)
 {
-	if (FromActor)
+	if (FromActor->FindComponentByClass<UCHAttributeComponent>())
 	{
 		UCHAttributeComponent* Comp = FromActor->FindComponentByClass<UCHAttributeComponent>();
+		OutComponent = Comp;
 		return Comp->Attributes;
 	}
 
+	// Otherwise return empty
 	return TMap<FName, FAttribute>();
 }
 
@@ -27,27 +30,31 @@ void UCHAttributeComponent::BeginPlay()
 	Super::BeginPlay();
 	
 	GetOwner()->GetWorldTimerManager().SetTimer(TimerHandle_AttributeDecay, this, &UCHAttributeComponent::AttributeDecayTimerElapsed, DecayTimerInterval, true);
+
 }
 
 
 void UCHAttributeComponent::AttributeDecayTimerElapsed()
 {
-	AttributeDecay();
+	AttributeDecay(bDecayActivate);
 
 	OnAttributeChange.Broadcast(GetOwner(), this);
 }
 
-void UCHAttributeComponent::AttributeDecay()
+void UCHAttributeComponent::AttributeDecay(bool bDecay)
 {
-	for (TPair<FName, FAttribute>& AttributePair : Attributes)
+	if (bDecay)
 	{
-		FAttribute& Attribute = AttributePair.Value;
+		for (TPair<FName, FAttribute>& AttributePair : Attributes)
+		{
+			FAttribute& Attribute = AttributePair.Value;
 
-		Attribute.CurrentValue += Attribute.DecayValue;
+			Attribute.CurrentValue += Attribute.DecayValue;
 
-		// Maybe add a clamp? to the value when reaching 0?
+			// Don't go below zero
+			Attribute.CurrentValue = FMath::Clamp(Attribute.CurrentValue, 0, Attribute.MaxValue);
+		}
 	}
-
 }
 
 
@@ -58,6 +65,7 @@ void UCHAttributeComponent::AddAttribute(FName Name, float Value = 100.0f, float
 		return;
 	}
 
+	// Set the new attributes variables
 	FAttribute NewAttributeStats;
 	NewAttributeStats.CurrentValue = Value;
 	NewAttributeStats.MaxValue = MaxValue;
@@ -77,11 +85,20 @@ void UCHAttributeComponent::RemoveAttribute(FName Name)
 	Attributes.Remove(Name);
 }
 
-// TO BE FIXED ?
-void UCHAttributeComponent::IncreaseAttributeValue(FName Name, float Value)
+void UCHAttributeComponent::IncreaseAttributeCurrentValue(FName Name, float Value)
 {
 	if (Attributes.Contains(Name))
 	{
 		Attributes[Name].CurrentValue = FMath::Clamp(Attributes[Name].CurrentValue + Value, 0.0f, Attributes[Name].MaxValue);
+
+		OnAttributeChange.Broadcast(GetOwner(), this);
+	}
+}
+
+void UCHAttributeComponent::IncreaseAttributeDecayValue(FName Name, float Value)
+{
+	if (Attributes.Contains(Name))
+	{
+		Attributes[Name].DecayValue = Value;
 	}
 }

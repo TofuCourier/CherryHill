@@ -9,6 +9,7 @@
 class UInputAction;
 class UInputMappingContext;
 class ACherryHillCharacter;
+class UCHAttributeComponent;
 
 UCLASS()
 class CHERRYHILL_API ACHJetpack : public AActor
@@ -25,12 +26,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Dampen")
 	float SpringDamping = 2.0f;
 
-
+	/* Current charge amount Thrusting/Boosting */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
 	float BoostCharge = 0.0f;
 
+	/* Maximum boost charge amount when Thrusting/Boosting */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
-	float MaxBoostCharge = 1.5f; // seconds to max
+	float MaxBoostCharge = 3.0f; // seconds to max
+
+	/* Default Boost amount when flying */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
+	float DefaultBoost = 1.0f; 
 
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
 	float BoostStrengthMax = 2000.0f;
@@ -47,15 +53,24 @@ public:
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float ThrustAccel = 10.0f;
+	float ThrustAccel = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
 	float MaxThrust = 20.0f;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
+	float LaunchSpeed; // how fast thrust builds up
+
+
 
 protected:
 
 	UPROPERTY()
 	ACherryHillCharacter* OwningCharacter = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeComp", meta = (AllowPrivateAccess = "true"))
+	UCHAttributeComponent* AttributeComp;
 
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
@@ -78,27 +93,20 @@ protected:
 	UInputAction* DeactivateJetpackAction;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float LaunchSpeed; // how fast thrust builds up
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Flying)
-	float DefaultThrust = 50.0f; // flying speed??? flying speed is 600
-
-
-
-
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadOnly)
 	bool bJetpackActive = false;
 	
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(BlueprintReadOnly)
 	bool bIsFlying = false;
 
-	UPROPERTY(BlueprintReadWrite)
-	bool bHasJumped = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(BlueprintReadOnly)
 	bool bIsThrusting = false;
 
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsBoosting = false;
+
+	UPROPERTY(BlueprintReadOnly)
 	bool bIsStabilizing = false;
 
 	float HoverTargetZ = 0.0f; // Set when launching
@@ -109,18 +117,12 @@ protected:
 
 	virtual void BeginPlay() override;
 
-public:	
+	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation
+	void OnActivateThrustTimer(APlayerController* Controller);
 
 
-	UFUNCTION(BlueprintCallable, Category = "JetPack")
-	void AttachJetpack(ACharacter* TargetCharacter);
+	void ThrustInitiate();
 
-	UFUNCTION()
-	void OnJetpackActivate(AActor* IntigatorActor, bool bIsJetpackThrusting);
-
-	void JetpackDeactivate();
-
-	void ThrustUp();
 
 	void ThrustRelease();
 
@@ -130,13 +132,27 @@ public:
 
 	void ThrustBoost();
 
+	void BoostRelease();
+
 	void Hover();
+
+	float GetCurrentFuel();
+
+	bool HasFuel();
+
+public:	
+
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	void AttachJetpack(ACharacter* TargetCharacter);
+
+	UFUNCTION()
+	void OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, bool bIsJetpackThrusting);
+
+	void JetpackDeactivate();
+
+	bool IsThrusting();
 
 	virtual void Tick(float DeltaTime) override;
 
-
-
-
-
-
+	void ThrustUp();
 };
