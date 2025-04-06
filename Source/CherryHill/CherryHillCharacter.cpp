@@ -157,10 +157,10 @@ void ACherryHillCharacter::StartJumpOrFly()
 	{
 		bHasJumped = false;
 		bJetpackActive = true;
-		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		//GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 		UE_LOG(LogTemp, Warning, TEXT("Jetpack engaged!"));
 		
-		OnJetpackActivate.Broadcast(this, MyJetpack, true);
+ 		OnJetpackActivate.Broadcast(this, MyJetpack, true);
 	}
 }
 

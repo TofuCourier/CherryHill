@@ -48,7 +48,9 @@ void ACHJetpack::OnActivateThrustTimer(APlayerController* Controller)
 			}
 			else
 			{
-				GetWorld()->GetTimerManager().ClearTimer(InputCheckDelayHandle);
+				//GetWorld()->GetTimerManager().ClearTimer(InputCheckDelayHandle);
+				//GetWorld()->GetTimerManager().PauseTimer(InputCheckDelayHandle);
+				//ThrustRelease();
 			}
 		},
 		0.02,  // Not DeltaSeconds to prevent jitter on frame rate change
@@ -115,7 +117,6 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 			// Thrust Up
 			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::Started, this, &ACHJetpack::ThrustInitiate);
 			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::Triggered, this, &ACHJetpack::ThrustUp);
-			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::Ongoing, this, &ACHJetpack::ThrustUp);
 			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::Completed, this, &ACHJetpack::ThrustRelease);
 
 			// Thrust Down
@@ -128,15 +129,11 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 
 			// No Thrust
 			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::None, this, &ACHJetpack::ThrustToHover);
-			//EnhancedInputComponent->BindAction(ThrustBoostAction, ETriggerEvent::None, this, &ACHJetpack::ThrustToHover);
 
 			// Deactivate
 			EnhancedInputComponent->BindAction(DeactivateJetpackAction, ETriggerEvent::Completed, this, &ACHJetpack::JetpackDeactivate);
 
 			OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-
-
-			
 
 			bIsFlying = true;
 
@@ -146,8 +143,11 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 			// Fuel Decay On
 			AttributeComp->SetTimerDecayActive(true);
 		}
+		else
+		{
+			JetpackDeactivate();
+		}
 	}
-	
 }
 
 void ACHJetpack::JetpackDeactivate()
@@ -191,11 +191,12 @@ void ACHJetpack::ThrustUp()
 
 	// Step 1: Gradual boost charge increase
 	BoostCharge += GetWorld()->GetDeltaSeconds();
-	BoostCharge = FMath::Clamp(BoostCharge, BoostCharge, MaxBoostCharge);
+	BoostCharge = FMath::Clamp(BoostCharge, 0, MaxBoostCharge);
 
 	// Step 2: Map charge to usable thrust power (Alpha from 0–1)
 	float Alpha = BoostCharge / MaxBoostCharge;
 
+	UE_LOG(LogTemp, Warning, TEXT("BoostCharge %f  !"), BoostCharge);
 
 	// Interpolate LaunchSpeed toward MaxThrust based on charge
 	LaunchSpeed = FMath::FInterpTo(LaunchSpeed, FMath::Lerp(BoostStrengthMin, BoostStrengthMax, Alpha), GetWorld()->GetDeltaSeconds(), ThrustAccel);
@@ -221,7 +222,7 @@ void ACHJetpack::ThrustRelease()
 		while (BoostCharge > 1.0f)
 		{
 			BoostCharge -= 0.005;
-			OwningCharacter->LaunchCharacter(FVector(OwningCharacter->GetCharacterMovement()->Velocity.X, OwningCharacter->GetCharacterMovement()->Velocity.Y ,  LaunchSpeed * BoostCharge), true, false);
+			OwningCharacter->LaunchCharacter(FVector(OwningCharacter->GetCharacterMovement()->Velocity.X, OwningCharacter->GetCharacterMovement()->Velocity.Y ,  LaunchSpeed * BoostCharge * 2), true, false);
 		}
 
 		bIsStabilizing = true;
@@ -268,24 +269,21 @@ void ACHJetpack::ThrustToHover()
 
 		OwningCharacter->SetActorLocation(Location);
 
-		UE_LOG(LogTemp, Warning, TEXT("Displacement %f  !"), Displacement);
-		UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity %f  !"), StabilizeVelocity);
 
 
 		// End stabilization once close enough and velocity is low
 		// Boosting Up
-		if (Displacement > 100.0f && StabilizeVelocity > 1000.0f)
-		{
-			bIsStabilizing = false;
-			HoverTime = 0.0f;
-			return;
-		}
 
 		if (FMath::Abs(Displacement) <= 5.0f && StabilizeVelocity <= 20.0f)
 		{
  			bIsStabilizing = false;
 			HoverTime = 0.0f;
 			return;
+		}
+		if (Displacement > 100.0f && StabilizeVelocity > 1000.0f)
+		{
+			bIsStabilizing = false;
+			HoverTime = 0.0f;
 		}
 		// Boosting Down
 
@@ -364,7 +362,7 @@ void ACHJetpack::BoostRelease()
 
 	if (!bIsThrusting)
 	{
-		OwningCharacter->LaunchCharacter(BoostCharge * OwningCharacter->GetFirstPersonCameraComponent()->GetForwardVector().GetSafeNormal(), false, false);
+		//OwningCharacter->LaunchCharacter(BoostCharge * OwningCharacter->GetFirstPersonCameraComponent()->GetForwardVector().GetSafeNormal(), false, false);
 
 		LaunchSpeed = 10.0f;
 		bIsStabilizing = true;
