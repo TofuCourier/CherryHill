@@ -132,7 +132,7 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 			EnhancedInputComponent->BindAction(DeactivateJetpackAction, ETriggerEvent::Completed, this, &ACHJetpack::JetpackDeactivate);
 
 			// Fuel Decay On
-			AttributeComp->SetTimerDecayActive(true);
+			AttributeComp->SetTimerDecay(true);
 
 			// ** Set Default Speed  **
 			// BoostSpeedMax = BoostSpeedMax - Mass;   // Uncomment when adding in mass. Mass effects velocity.
@@ -159,7 +159,7 @@ void ACHJetpack::JetpackDeactivate()
 	StabilizeVelocity = 0.0f; // reset
 	HoverTime = 0.0f;
 
-	AttributeComp->SetTimerDecayActive(false);
+	AttributeComp->SetTimerDecay(false);
 
 	
 	if (APlayerController* PlayerController = Cast<APlayerController>(OwningCharacter->GetController()))
@@ -226,7 +226,6 @@ void ACHJetpack::ThrustRelease()
 		BoostSpeed = SpeedDefault;
 
 		AttributeComp->IncreaseAttributeDecayValue("Fuel", -1.0f);
-		//OwningCharacter->LaunchCharacter(FVector(OwningCharacter->GetCharacterMovement()->Velocity.X, OwningCharacter->GetCharacterMovement()->Velocity.Y , BoostCharge), true, false);
 	}
 		bIsThrusting = false;
 		HoverTime = 0.0f;
@@ -266,15 +265,16 @@ void ACHJetpack::ThrustToHover()
 		float Accel = SpringForce + DampingForce;
 
 		StabilizeVelocity += Accel * GetWorld()->GetDeltaSeconds();
-		StabilizeVelocity = FMath::Clamp(StabilizeVelocity, -1000.0f, 1500.0f);
+		StabilizeVelocity = FMath::Clamp(StabilizeVelocity, -BoostSpeedMax, BoostSpeedMax);
 
 		Location.Z += StabilizeVelocity * GetWorld()->GetDeltaSeconds();
 
 		OwningCharacter->SetActorLocation(Location);
-
+		UE_LOG(LogTemp, Warning, TEXT("Displacement %f"), Displacement);
+		UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity %f"), StabilizeVelocity);
 
 		// Stabilize back up if we are falling
-		if (Displacement > 100.0f)
+		if (Displacement >= 50.0f)
 		{
 			FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
 			float DesiredLift = FMath::GetMappedRangeValueClamped(FVector2D(100.f, 500.f), FVector2D(300.f, 1500.f), Displacement);
@@ -286,7 +286,7 @@ void ACHJetpack::ThrustToHover()
 
 		// End stabilization once close enough and velocity is low
 		// If we were just Boosting Down
-		if (Displacement  > 100.0f && StabilizeVelocity >= -20.0f && StabilizeVelocity <= 20.0f)
+		if (Displacement < 100.0f && StabilizeVelocity > 0 && StabilizeVelocity < 150.0f)
 		{
 			bIsStabilizing = false;
 			return;
@@ -314,7 +314,7 @@ void ACHJetpack::ThrustToHover()
 // @TODO PREVENT HOVER FROM TICKING WHILE THIS IS RUNNING
 void ACHJetpack::ThrustDown()
 {	
-	if (!bIsFlying)	return;
+	if (!bIsFlying && bIsThrusting)	return;
 
 	bIsThrusting = false;
 	bIsBoosting = false;
@@ -323,7 +323,7 @@ void ACHJetpack::ThrustDown()
 
 
 	bIsStabilizing = true;
-	HoverTargetZ = OwningCharacter->GetActorLocation().Z;
+	HoverTargetZ = OwningCharacter->GetActorLocation().Z + 50;
 	StabilizeVelocity = 0.0f; // reset
 	HoverTime = 0.0f;
 

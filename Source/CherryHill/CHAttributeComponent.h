@@ -72,7 +72,7 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	void SetTimerDecayActive(bool Activate) { bDecayActivate = Activate; }
+	void SetTimerDecay(bool Activate) { bDecayActivate = Activate; }
 
 
 private:
