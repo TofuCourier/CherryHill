@@ -43,8 +43,6 @@ void UCHInteractionComponent::FindInteractable()
 
 	AActor* MyOwner = GetOwner();
 
-
-	//TArray<FHitResult> Hits;
 	FHitResult Hits;
 
 	FVector EyeLocation;
@@ -53,11 +51,6 @@ void UCHInteractionComponent::FindInteractable()
 
 	FVector EndLocation = EyeLocation + (EyeRotation.Vector() * TraceDistance);
 
-	//FCollisionShape Shape;
-	//Shape.SetSphere(TraceRadius);
-
-
-	//bool bBlockingHit = GetWorld()->SweepMultiByObjectType(Hits, EyeLocation, EndLocation, FQuat::Identity, ObjectsQueryParams, Shape);
 	bool bBlockingHit = GetWorld()->LineTraceSingleByObjectType(Hits, EyeLocation, EndLocation, ObjectsQueryParams);
 
 
@@ -68,7 +61,7 @@ void UCHInteractionComponent::FindInteractable()
 	FocusedActor = nullptr;
 	AActor* HitActor = Hits.GetActor();
 
-	if (HitActor)
+	if (HitActor && FocusedActor != HitActor)
 	{
 		if (HitActor->Implements<UCHGameplayInterface>())
 		{
@@ -78,11 +71,9 @@ void UCHInteractionComponent::FindInteractable()
 	}
 }
 
-// Called every frame
 void UCHInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	FindInteractable();
-	// ...
 }
 

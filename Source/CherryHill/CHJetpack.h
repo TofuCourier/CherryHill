@@ -10,6 +10,8 @@ class UInputAction;
 class UInputMappingContext;
 class ACherryHillCharacter;
 class UCHAttributeComponent;
+class UEnhancedInputComponent;
+struct FInputActionValue;
 
 UCLASS()
 class CHERRYHILL_API ACHJetpack : public AActor
@@ -26,23 +28,28 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Dampen")
 	float SpringDamping = 2.0f;
 
-	/* Current charge amount Thrusting/Boosting */
-	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
-	float BoostCharge = 0.0f;
-
-	/* Maximum boost charge amount when Thrusting/Boosting */
-	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
-	float MaxBoostCharge = 3.0f; // seconds to max
+	/* Current charge amount Thrusting/Boosting  @TODO Should this stay editable?*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Jetpack|Boost")
+	float BoostCharge = 0.5f;
 
 	/* Default Boost amount when flying */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float DefaultBoost = 1.0f; 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
+	float BoostChargeDefault = 1.0f; 
 
-	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
-	float BoostStrengthMax = 2000.0f;
+	/* Maximum boost charge amount when Thrusting/Boosting */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Jetpack|Boost")
+	float BoostChargeMax = 3.0f; // seconds to max
 
+	/* Max Speed when Boosting cm/s */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Jetpack|Boost")
+	float BoostSpeedMax = 1000.0f;
+
+	/* Min Speed when Boosting cm/s */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
-	float BoostStrengthMin = 300.0f;
+	float BoostSpeedMin = 0.0f;
+
+	//UPROPERTY(EditAnywhere, Category = "Jetpack|Speed")
+	float SpeedDefault = 400.0f;
 
 
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
@@ -55,12 +62,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
 	float ThrustAccel = 0.1f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float MaxThrust = 20.0f;
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float LaunchSpeed; // how fast thrust builds up
+	float BoostSpeed; // how fast thrust builds up
 
 
 
@@ -87,6 +91,9 @@ protected:
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* ThrustBoostAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	UInputAction* MoveAction;
 
 	/** Deactivate Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
@@ -115,6 +122,8 @@ protected:
 
 	float HoverTime = 0.0;
 
+	FTimerHandle InputCheckDelayHandle;
+
 	virtual void BeginPlay() override;
 
 	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation
@@ -139,6 +148,15 @@ protected:
 	float GetCurrentFuel();
 
 	bool HasFuel();
+
+	void BoostChargeUp(float DeltaTime);
+
+	void BoostChargeDown(float DeltaTime);
+
+	UFUNCTION(BlueprintPure, Category = "Jetpack|Boost")
+	float GetBoostChargeAlpha() const;
+
+	void Move(const FInputActionValue& Value);
 
 public:	
 

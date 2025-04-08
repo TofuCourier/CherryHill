@@ -29,7 +29,6 @@ void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iteration
 	{
 		// Default falling behavior
 		Super::PhysFalling(DeltaTime, Iterations);
-		MaxFlySpeed = 600.0f;
 		return;
 	}
 
