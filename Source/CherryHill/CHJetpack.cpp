@@ -100,6 +100,7 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 		JetpackDeactivate();
 		return;
 	}
+
 	if (APlayerController* PlayerController = Cast<APlayerController>(OwningCharacter->GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -140,6 +141,7 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 
 			bIsFlying = true;
 			OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+			
 			// Allows for continuous thrust from activation jump
 			OnActivateThrustTimer(PlayerController);
 		}
@@ -158,6 +160,7 @@ void ACHJetpack::JetpackDeactivate()
 	BoostSpeed = 10.0f;
 	StabilizeVelocity = 0.0f; // reset
 	HoverTime = 0.0f;
+	BoostCharge = 0.0f;
 
 	AttributeComp->SetTimerDecay(false);
 
@@ -180,10 +183,20 @@ void ACHJetpack::Move(const FInputActionValue& Value)
 	// Set Speed Alpha to a value between 0 and 1 to mirror default speed vs max speed
 	float SpeedAlpha = FMath::GetRangePct(BoostSpeedMin, BoostSpeedMax, BoostSpeed);
 
-	// Apply the SpeedAlpha to the Movement Vector. Speed is based off BoostSpeed
-	OwningCharacter->AddMovementInput(GetActorForwardVector(), MovementVector.Y * SpeedAlpha);
-	OwningCharacter->AddMovementInput(GetActorRightVector(), MovementVector.X * SpeedAlpha);
 
+	// Prevents any vertical movement input from sneaking in due to camera pitch or character tilt
+	FVector FlatForward = GetActorForwardVector();
+	FlatForward.Z = 0.0f;
+	FlatForward.Normalize();
+
+	FVector FlatRight = GetActorRightVector();
+	FlatRight.Z = 0.0f;
+	FlatRight.Normalize();
+
+	float MovementDampen = bIsStabilizing ? 0.9f : 1.0f;
+	// Apply movement input with flattened vectors
+	OwningCharacter->AddMovementInput(FlatForward, MovementVector.Y * SpeedAlpha * MovementDampen);
+	OwningCharacter->AddMovementInput(FlatRight, MovementVector.X * SpeedAlpha * MovementDampen);
 }
 
 bool ACHJetpack::IsThrusting()
@@ -221,7 +234,7 @@ void ACHJetpack::ThrustRelease()
 	{
 		bIsStabilizing = true;
 		StabilizeVelocity = 0.0f;
-		HoverTargetZ = OwningCharacter->GetActorLocation().Z; // or however high you want to hover
+		HoverTargetZ = OwningCharacter->GetActorLocation().Z + 300; // or however high you want to hover. Too high of a number will prevent bounce from occuring
 
 		BoostSpeed = SpeedDefault;
 
@@ -236,13 +249,17 @@ void ACHJetpack::ThrustToHover()
 	if (!HasFuel())
 	{
 		JetpackDeactivate();
+		return;
 	}
 
 	// Get boost back up to default if we were just falling - @TODO WIP   final number is threshold
-	if (BoostCharge < BoostChargeDefault - 0.3)
+	if (BoostCharge < BoostChargeDefault - 0.05)
 	{
 		BoostChargeUp(GetWorld()->GetDeltaSeconds());
-		return;
+		if (BoostCharge < BoostChargeDefault - 0.3)
+		{
+			return;
+		}
 	}
 
 	if (BoostCharge > BoostChargeDefault && !IsThrusting())
@@ -256,7 +273,9 @@ void ACHJetpack::ThrustToHover()
 		FVector Location = OwningCharacter->GetActorLocation();
 		float CurrentZ = Location.Z;
 
-		// Spring force toward target
+		/* Spring force toward target */
+
+		// Value for within HoverTarget range
 		float Displacement = HoverTargetZ - CurrentZ;
 
 		// Apply spring-damper force: F = kx - cv
@@ -264,49 +283,58 @@ void ACHJetpack::ThrustToHover()
 		float DampingForce = -StabilizeVelocity * SpringDamping;
 		float Accel = SpringForce + DampingForce;
 
+		// Integrate "spring" velocity (this is the bounce driver)
 		StabilizeVelocity += Accel * GetWorld()->GetDeltaSeconds();
 		StabilizeVelocity = FMath::Clamp(StabilizeVelocity, -BoostSpeedMax, BoostSpeedMax);
 
-		Location.Z += StabilizeVelocity * GetWorld()->GetDeltaSeconds();
+		// Apply spring Z velocity to character's existing velocity (additive!)
+		FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
+		float PrevX = Velocity.X;
+		float PrevY = Velocity.Y;
 
-		OwningCharacter->SetActorLocation(Location);
-		UE_LOG(LogTemp, Warning, TEXT("Displacement %f"), Displacement);
-		UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity %f"), StabilizeVelocity);
-
-		// Stabilize back up if we are falling
-		if (Displacement >= 50.0f)
+		// If we are under the Target, spring back up (Simulates feel of Thrust up), otherwise fall - WIP.
+		if (Displacement >= 0.0f)
 		{
-			FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
-			float DesiredLift = FMath::GetMappedRangeValueClamped(FVector2D(100.f, 500.f), FVector2D(300.f, 1500.f), Displacement);
-
-			// Smoothly ramp Z velocity toward DesiredLift
-			Velocity.Z = FMath::FInterpTo(Velocity.Z, DesiredLift, GetWorld()->GetDeltaSeconds(), 1.5f);
+			// Smoothly ramp Velocity Z toward HoverTargetZ 
+			Velocity.Z = FMath::FInterpTo(Velocity.Z, BoostSpeedMax, GetWorld()->GetDeltaSeconds(), 3.0f);
+		}
+		else
+		{
+			Velocity.Z += StabilizeVelocity * GetWorld()->GetDeltaSeconds() * 2;
 		}
 
+		Velocity.X = PrevX;
+		Velocity.Y = PrevY;
 
-		// End stabilization once close enough and velocity is low
-		// If we were just Boosting Down
-		if (Displacement < 100.0f && StabilizeVelocity > 0 && StabilizeVelocity < 150.0f)
+		// I need a check for if the character is hitting the ground
+		//
+		//
+
+		// @ TODO Fix stabilizing thresholds
+		// Stabilize to a hover when within HoverTargetZ range. 
+		if (Displacement <= 10.0f && Displacement > 30.0f && StabilizeVelocity <= 20.0f && StabilizeVelocity >= 50.0f)
 		{
 			bIsStabilizing = false;
-			return;
+			HoverTime = 0.0f;
 		}
-
-
-		// If we were just Boosting Up
-		if (FMath::Abs(Displacement) <= 5.0f && StabilizeVelocity <= 20.0f)
+		if (Displacement <= 30.0f && Displacement > 0.0f && StabilizeVelocity <= 20.0f && StabilizeVelocity >= -250.0f)
 		{
- 			bIsStabilizing = false;
+			bIsStabilizing = false;
+			HoverTime = 0.0f;
 		}
+			UE_LOG(LogTemp, Warning, TEXT("Displacement %f"), Displacement);
+			UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity %f"), StabilizeVelocity);
+
+
 
 		// Skip hover bobbing until stabilized
 		return;
 	}
 
-	if (bIsFlying && !bIsThrusting && !bIsBoosting)
+	if (bIsFlying && !IsThrusting())
 	{
+		// We are hovering, so we are flying
 		OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-		HoverTime = 0.0f;
 		Hover();
 	}
 }
@@ -320,10 +348,8 @@ void ACHJetpack::ThrustDown()
 	bIsBoosting = false;
 	OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 
-
-
 	bIsStabilizing = true;
-	HoverTargetZ = OwningCharacter->GetActorLocation().Z + 50;
+	HoverTargetZ = OwningCharacter->GetActorLocation().Z - 50;
 	StabilizeVelocity = 0.0f; // reset
 	HoverTime = 0.0f;
 
@@ -337,29 +363,25 @@ void ACHJetpack::ThrustBoost()
 
 	FVector FinalBoost = FVector::ZeroVector;
 
+	// Charge boost towards max
 	BoostChargeUp(GetWorld()->GetDeltaSeconds());
 
-	// Charge boost towards max
-	 BoostSpeed = FMath::FInterpTo(BoostSpeed, FMath::Lerp(BoostSpeedMin, BoostSpeedMax, GetBoostChargeAlpha()), GetWorld()->GetDeltaSeconds(), ThrustAccel);
+	// Increase and Clamp speed based off Boost Charge
+	BoostSpeed = FMath::FInterpTo(BoostSpeed, FMath::Lerp(BoostSpeedMin, BoostSpeedMax, GetBoostChargeAlpha()), GetWorld()->GetDeltaSeconds(), ThrustAccel);
 
 	// Get the Direction the character is facing
 	FVector BoostDirection = OwningCharacter->GetFirstPersonCameraComponent()->GetForwardVector().GetSafeNormal();
 
-	// Multiply speed by direction to give us the Finalboost
+	// Multiply speed by direction to give us the Final boost
 	FinalBoost += BoostDirection * BoostSpeed;
 
-
+	// Add boost and clamp Characters final velocity to MaxBoostStrength
 	FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
-
-	// Clamp final velocity to MaxBoostStrength
 	Velocity = (Velocity + FinalBoost * GetWorld()->GetDeltaSeconds()).GetClampedToMaxSize(BoostSpeedMax);
-
 }
 
 void ACHJetpack::BoostRelease()
 {
-	bIsBoosting = false;
-	HoverTime = 0.0f;
 
 	if (!bIsThrusting)
 	{
@@ -369,14 +391,14 @@ void ACHJetpack::BoostRelease()
 		StabilizeVelocity = 0.0f;	 // reset
 
 		AttributeComp->IncreaseAttributeDecayValue("Fuel", -1.0f);
-
+		HoverTime = 0.0f;
 	}
-
+	bIsBoosting = false;
 }
 
 void ACHJetpack::Hover()
 {
-  	HoverTime += GetWorld()->GetDeltaSeconds();
+	HoverTime += GetWorld()->GetDeltaSeconds();
 
 	// Calculate bobbing offset
 	float BobOffset = FMath::Sin(HoverTime * HoverFrequency) * HoverAmplitude;
@@ -386,6 +408,8 @@ void ACHJetpack::Hover()
 	Velocity.Z = BobOffset;
 	OwningCharacter->GetCharacterMovement()->Velocity = Velocity;
 	StabilizeVelocity = 1.0f;
+
+	//StabilizeVelocity = 1.0f;
 }
 
 float ACHJetpack::GetCurrentFuel()
@@ -406,7 +430,6 @@ float ACHJetpack::GetCurrentFuel()
 
 			return Attribute.CurrentValue;
 		}
-
 	}
 	return false;
 }
@@ -425,7 +448,6 @@ void ACHJetpack::BoostChargeUp(float DeltaTime)
 	BoostCharge += DeltaTime * ThrustAccel;
 	BoostCharge = FMath::Clamp(BoostCharge, 0.0f, BoostChargeMax);
 	AttributeComp->OnAttributeChange.Broadcast(this, AttributeComp);
-
 }
 
 void ACHJetpack::BoostChargeDown(float DeltaTime)

@@ -45,6 +45,8 @@ void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iteration
 	
 	Velocity.Z = FMath::Clamp(Velocity.Z, 0, MaxFlySpeed);
 
+	UE_LOG(LogTemp, Warning, TEXT("Velocity"), Velocity.Z);
+
 }
 
 // Could this be better?

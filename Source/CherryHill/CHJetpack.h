@@ -170,6 +170,8 @@ public:
 
 	bool IsThrusting();
 
+	bool IsStabilizing() { return bIsStabilizing; }
+
 	virtual void Tick(float DeltaTime) override;
 
 	void ThrustUp();
