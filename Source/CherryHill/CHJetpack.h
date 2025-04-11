@@ -116,6 +116,16 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsStabilizing = false;
 
+	// Within stable range - may not be needed
+	bool bWithinStableRange = false;
+
+	// Prevents inputs from being bound more than once
+	bool bJetpackInputBound = false;
+
+	// 
+	float PrevD = 0.0;
+	float PrevV = 0.0;
+
 	float HoverTargetZ = 0.0f; // Set when launching
 
 	float StabilizeVelocity = 0.0f;

@@ -55,7 +55,7 @@ void ACHJetpack::OnActivateThrustTimer(APlayerController* Controller)
 		true
 	);
 
-}
+ }
 
 void ACHJetpack::ThrustInitiate()
 {
@@ -72,7 +72,7 @@ void ACHJetpack::ThrustInitiate()
 void ACHJetpack::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-//	UE_LOG(LogTemp, Warning, TEXT("BoostSpeed %f"), BoostSpeed);
+
 }
 
 void ACHJetpack::AttachJetpack(ACharacter* TargetCharacter)
@@ -91,10 +91,7 @@ void ACHJetpack::AttachJetpack(ACharacter* TargetCharacter)
 
 void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, bool bIsJetpackThrusting)
 {
-	// bIsJetpackThrusting check may be unnecessary, Keep AttributeComp check? Need to check attribute comp in HasFuel Anyways
-	if (!bIsJetpackThrusting || !AttributeComp) return;
-
-	// Check Fuel
+	// Also checks for attribute comp
 	if (!HasFuel())
 	{
 		JetpackDeactivate();
@@ -108,7 +105,15 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 			Subsystem->AddMappingContext(FlyMappingContext, 1);
 		}
 
-		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
+		UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent);
+
+		if (!EnhancedInputComponent)
+		{
+			JetpackDeactivate();
+			return;
+		}
+
+		if (!bJetpackInputBound)
 		{
 			// Thrust Up
 			EnhancedInputComponent->BindAction(ThrustUpAction, ETriggerEvent::Started, this, &ACHJetpack::ThrustInitiate);
@@ -131,24 +136,21 @@ void ACHJetpack::OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, 
 
 			// Deactivate
 			EnhancedInputComponent->BindAction(DeactivateJetpackAction, ETriggerEvent::Completed, this, &ACHJetpack::JetpackDeactivate);
-
-			// Fuel Decay On
-			AttributeComp->SetTimerDecay(true);
-
-			// ** Set Default Speed  **
-			// BoostSpeedMax = BoostSpeedMax - Mass;   // Uncomment when adding in mass. Mass effects velocity.
-			SpeedDefault = (BoostSpeedMax / 2.0f);
-
-			bIsFlying = true;
-			OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+			bJetpackInputBound = true;
+		}
 			
-			// Allows for continuous thrust from activation jump
-			OnActivateThrustTimer(PlayerController);
-		}
-		else
-		{
-			JetpackDeactivate();
-		}
+		// Fuel Decay On
+		AttributeComp->SetTimerDecay(true);
+
+		// ** Set Default Speed  **
+		// BoostSpeedMax = BoostSpeedMax - Mass;   // Uncomment when adding in mass. Mass effects velocity.
+		SpeedDefault = (BoostSpeedMax / 2.0f);
+
+		bIsFlying = true;
+		OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		
+		// Allows for continuous thrust from activation jump
+		OnActivateThrustTimer(PlayerController);
 	}
 }
 
@@ -157,7 +159,7 @@ void ACHJetpack::JetpackDeactivate()
 	bIsFlying = false;
 	bIsThrusting = false;
 	bIsStabilizing = false;
-	BoostSpeed = 10.0f;
+	BoostSpeed = 0.0f;
 	StabilizeVelocity = 0.0f; // reset
 	HoverTime = 0.0f;
 	BoostCharge = 0.0f;
@@ -170,19 +172,18 @@ void ACHJetpack::JetpackDeactivate()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->RemoveMappingContext(FlyMappingContext);
-			OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+			OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 		}
 	}
 }
 
-// When character is falling, harder to move due to BoostCharge -- @TODO test this
 void ACHJetpack::Move(const FInputActionValue& Value)
 {
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	// Set Speed Alpha to a value between 0 and 1 to mirror default speed vs max speed
+	// SpeedAlpha is based of BoostCharge %
 	float SpeedAlpha = FMath::GetRangePct(BoostSpeedMin, BoostSpeedMax, BoostSpeed);
-
+	UE_LOG(LogTemp, Warning, TEXT("Jetpack engaged! %f"), BoostSpeed);
 
 	// Prevents any vertical movement input from sneaking in due to camera pitch or character tilt
 	FVector FlatForward = GetActorForwardVector();
@@ -197,6 +198,9 @@ void ACHJetpack::Move(const FInputActionValue& Value)
 	// Apply movement input with flattened vectors
 	OwningCharacter->AddMovementInput(FlatForward, MovementVector.Y * SpeedAlpha * MovementDampen);
 	OwningCharacter->AddMovementInput(FlatRight, MovementVector.X * SpeedAlpha * MovementDampen);
+
+
+
 }
 
 bool ACHJetpack::IsThrusting()
@@ -224,7 +228,7 @@ void ACHJetpack::ThrustUp()
 	OwningCharacter->AddMovementInput(FVector::UpVector, abs(BoostSpeed * GetWorld()->GetDeltaSeconds()));
 	FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
 
-	UE_LOG(LogTemp, Warning, TEXT("BoostSpeed %f "), BoostSpeed); 
+//	UE_LOG(LogTemp, Warning, TEXT("BoostSpeed %f "), BoostSpeed); 
 }
 
 void ACHJetpack::ThrustRelease()
@@ -234,7 +238,7 @@ void ACHJetpack::ThrustRelease()
 	{
 		bIsStabilizing = true;
 		StabilizeVelocity = 0.0f;
-		HoverTargetZ = OwningCharacter->GetActorLocation().Z + 300; // or however high you want to hover. Too high of a number will prevent bounce from occuring
+		HoverTargetZ = OwningCharacter->GetActorLocation().Z; // or however high you want to hover. Too high of a number will prevent bounce from occuring
 
 		BoostSpeed = SpeedDefault;
 
@@ -248,6 +252,13 @@ void ACHJetpack::ThrustToHover()
 {
 	if (!HasFuel())
 	{
+		JetpackDeactivate();
+		return;
+	}
+
+	if (OwningCharacter->GetCharacterMovement()->IsMovingOnGround())
+	{
+		bIsStabilizing = false;
 		JetpackDeactivate();
 		return;
 	}
@@ -267,63 +278,70 @@ void ACHJetpack::ThrustToHover()
 		BoostChargeDown(GetWorld()->GetDeltaSeconds());
 	}
 
-
+	// I still need to fix the slowdown when we stabilize
 	if (bIsStabilizing)
 	{
 		FVector Location = OwningCharacter->GetActorLocation();
 		float CurrentZ = Location.Z;
 
-		/* Spring force toward target */
-
-		// Value for within HoverTarget range
 		float Displacement = HoverTargetZ - CurrentZ;
 
-		// Apply spring-damper force: F = kx - cv
+		// Spring-damper calculation
 		float SpringForce = Displacement * SpringStrength;
 		float DampingForce = -StabilizeVelocity * SpringDamping;
 		float Accel = SpringForce + DampingForce;
 
-		// Integrate "spring" velocity (this is the bounce driver)
+		// Apply spring acceleration to stabilize velocity
 		StabilizeVelocity += Accel * GetWorld()->GetDeltaSeconds();
+
+		// Optional: Dampen stabilize velocity further when near hover range
+		if (FMath::Abs(Displacement) < 20.0f)
+		{
+			StabilizeVelocity = FMath::FInterpTo(StabilizeVelocity, 0.0f, GetWorld()->GetDeltaSeconds(), 2.0f);
+		}
+
+		// Clamp velocity so it doesn’t keep rising or falling forever
 		StabilizeVelocity = FMath::Clamp(StabilizeVelocity, -BoostSpeedMax, BoostSpeedMax);
 
-		// Apply spring Z velocity to character's existing velocity (additive!)
+		// Apply stabilize velocity to character’s vertical motion
 		FVector& Velocity = OwningCharacter->GetCharacterMovement()->Velocity;
-		float PrevX = Velocity.X;
-		float PrevY = Velocity.Y;
 
-		// If we are under the Target, spring back up (Simulates feel of Thrust up), otherwise fall - WIP.
-		if (Displacement >= 0.0f)
+		// Preserve X/Y
+		const float PrevX = Velocity.X;
+		const float PrevY = Velocity.Y;
+
+		// If moving away from the target, dampen the stabilize velocity more aggressively
+		if ((Displacement > 0 && StabilizeVelocity < 0) || (Displacement < 0 && StabilizeVelocity > 0))
 		{
-			// Smoothly ramp Velocity Z toward HoverTargetZ 
-			Velocity.Z = FMath::FInterpTo(Velocity.Z, BoostSpeedMax, GetWorld()->GetDeltaSeconds(), 3.0f);
-		}
-		else
-		{
-			Velocity.Z += StabilizeVelocity * GetWorld()->GetDeltaSeconds() * 2;
+			StabilizeVelocity = FMath::FInterpTo(StabilizeVelocity, 0.0f, GetWorld()->GetDeltaSeconds(), 4.0f);
 		}
 
+		// Smoothly interpolate Velocity.Z toward stabilize target
+		float TargetZVelocity = StabilizeVelocity * 0.5f;
+		Velocity.Z = FMath::FInterpTo(Velocity.Z, TargetZVelocity, GetWorld()->GetDeltaSeconds(), 2.0f);
+
+		// Restore preserved X/Y
 		Velocity.X = PrevX;
 		Velocity.Y = PrevY;
 
-		// I need a check for if the character is hitting the ground
-		//
-		//
 
-		// @ TODO Fix stabilizing thresholds
-		// Stabilize to a hover when within HoverTargetZ range. 
-		if (Displacement <= 10.0f && Displacement > 30.0f && StabilizeVelocity <= 20.0f && StabilizeVelocity >= 50.0f)
+
+		// End stabilization once close enough and movement is calm
+		if (Displacement > PrevD && StabilizeVelocity < PrevV)
 		{
 			bIsStabilizing = false;
+			bWithinStableRange = true;
 			HoverTime = 0.0f;
 		}
-		if (Displacement <= 30.0f && Displacement > 0.0f && StabilizeVelocity <= 20.0f && StabilizeVelocity >= -250.0f)
+
+		if (Displacement > 0.0f && StabilizeVelocity > 0.0f && abs(Displacement) < PrevD)
 		{
 			bIsStabilizing = false;
+			bWithinStableRange = true;
 			HoverTime = 0.0f;
 		}
-			UE_LOG(LogTemp, Warning, TEXT("Displacement %f"), Displacement);
-			UE_LOG(LogTemp, Warning, TEXT("StabilizeVelocity %f"), StabilizeVelocity);
+		PrevD = Displacement;
+		PrevV = StabilizeVelocity;
 
 
 
@@ -349,12 +367,11 @@ void ACHJetpack::ThrustDown()
 	OwningCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 
 	bIsStabilizing = true;
-	HoverTargetZ = OwningCharacter->GetActorLocation().Z - 50;
+	HoverTargetZ = OwningCharacter->GetActorLocation().Z ;
 	StabilizeVelocity = 0.0f; // reset
-	HoverTime = 0.0f;
-
+	BoostCharge = 0.5;
+	BoostSpeed = SpeedDefault;
 	// This will effect recover time
-	BoostCharge = 0.5f;
 }
 
 void ACHJetpack::ThrustBoost()
@@ -382,7 +399,6 @@ void ACHJetpack::ThrustBoost()
 
 void ACHJetpack::BoostRelease()
 {
-
 	if (!bIsThrusting)
 	{
 		BoostSpeed = SpeedDefault;
@@ -408,8 +424,6 @@ void ACHJetpack::Hover()
 	Velocity.Z = BobOffset;
 	OwningCharacter->GetCharacterMovement()->Velocity = Velocity;
 	StabilizeVelocity = 1.0f;
-
-	//StabilizeVelocity = 1.0f;
 }
 
 float ACHJetpack::GetCurrentFuel()
