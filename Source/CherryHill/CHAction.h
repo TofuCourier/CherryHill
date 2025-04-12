@@ -53,7 +53,7 @@ public:
 	
 	//void Initalize(UCHActionComponent* NewActionComp);
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Action")
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Action")
 	void StartAction(AActor* Instigator);
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Action")

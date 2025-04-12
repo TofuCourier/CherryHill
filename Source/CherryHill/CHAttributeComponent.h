@@ -65,7 +65,7 @@ public:
 	void RemoveAttribute(FName Name);
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	void IncreaseAttributeCurrentValue(FName Name, float Value);
+	bool IncreaseAttributeCurrentValue(FName Name, float Value);
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	void IncreaseAttributeDecayValue(FName Name, float Value);

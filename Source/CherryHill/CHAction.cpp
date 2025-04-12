@@ -44,7 +44,6 @@ bool UCHAction::CanStart_Implementation(AActor* Instigator)
 		return false;
 	}
 
-
 	return true;
 }
 

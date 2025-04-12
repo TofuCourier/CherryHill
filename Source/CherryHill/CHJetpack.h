@@ -90,7 +90,7 @@ protected:
 
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* ThrustBoostAction;
+	UInputAction* BoostAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* MoveAction;
@@ -116,6 +116,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsStabilizing = false;
 
+	bool bInThrustFall = false;
+
 	// Within stable range - may not be needed
 	bool bWithinStableRange = false;
 
@@ -123,8 +125,11 @@ protected:
 	bool bJetpackInputBound = false;
 
 	// 
-	float PrevD = 0.0;
-	float PrevV = 0.0;
+	float PrevStabilizeVelocity = 0.0;
+
+	float PrevDisplacement = 0.0f;
+
+	FVector SavedLateralVelocity = FVector::ZeroVector;
 
 	float HoverTargetZ = 0.0f; // Set when launching
 
@@ -143,15 +148,19 @@ protected:
 	void ThrustInitiate();
 
 
-	void ThrustRelease();
+	void ThrustUpComplete();
 
 	void ThrustToHover();
 
+	void ThrustDownInitiate();
+
 	void ThrustDown();
 
-	void ThrustBoost();
+	void ThrustDownComplete();
 
-	void BoostRelease();
+	void Boost();
+
+	void BoostComplete();
 
 	void Hover();
 

@@ -12,6 +12,7 @@
 #include "Animation/AnimInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
+#include "CHAttributeComponent.h"
 
 // Sets default values for this component's properties
 UCherryHillWeaponComponent::UCherryHillWeaponComponent()
@@ -23,7 +24,15 @@ UCherryHillWeaponComponent::UCherryHillWeaponComponent()
 
 void UCherryHillWeaponComponent::Fire()
 {
+	// Check for Character
 	if (Character == nullptr || Character->GetController() == nullptr)
+	{
+		return;
+	}
+
+	// Do we have Ammo/Newspapers?
+	UCHAttributeComponent* AttributeComp = GetOwner()->FindComponentByClass<UCHAttributeComponent>();
+	if (!AttributeComp->IncreaseAttributeCurrentValue("Papers", -1.0f))
 	{
 		return;
 	}
@@ -64,6 +73,7 @@ void UCherryHillWeaponComponent::Fire()
 			AnimInstance->Montage_Play(FireAnimation, 1.0f);
 		}
 	}
+
 }
 
 bool UCherryHillWeaponComponent::AttachWeapon(ACherryHillCharacter* TargetCharacter)

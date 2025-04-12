@@ -30,9 +30,7 @@ void UCHAttributeComponent::BeginPlay()
 	Super::BeginPlay();
 	
 	GetOwner()->GetWorldTimerManager().SetTimer(TimerHandle_AttributeDecay, this, &UCHAttributeComponent::AttributeDecayTimerElapsed, DecayTimerInterval, true);
-
 }
-
 
 void UCHAttributeComponent::AttributeDecayTimerElapsed()
 {
@@ -85,14 +83,17 @@ void UCHAttributeComponent::RemoveAttribute(FName Name)
 	Attributes.Remove(Name);
 }
 
-void UCHAttributeComponent::IncreaseAttributeCurrentValue(FName Name, float Value)
+bool UCHAttributeComponent::IncreaseAttributeCurrentValue(FName Name, float Value)
 {
-	if (Attributes.Contains(Name))
+	if (!Attributes.Contains(Name))
 	{
-		Attributes[Name].CurrentValue = FMath::Clamp(Attributes[Name].CurrentValue + Value, 0.0f, Attributes[Name].MaxValue);
-
-		OnAttributeChange.Broadcast(GetOwner(), this);
+		return false;
 	}
+
+	Attributes[Name].CurrentValue = FMath::Clamp(Attributes[Name].CurrentValue + Value, 0.0f, Attributes[Name].MaxValue);
+	OnAttributeChange.Broadcast(GetOwner(), this);
+
+	return Attributes[Name].CurrentValue != 0;
 }
 
 void UCHAttributeComponent::IncreaseAttributeDecayValue(FName Name, float Value)
