@@ -17,7 +17,7 @@ class UCHActionComponent;
 class ACHJetpack;
 struct FInputActionValue;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnJetpackActivate, AActor*, InstigatorActor, ACHJetpack*, OwningJetpack, bool, bIsJetpackThrusting); // NEED TO ADD ATTRIBUTES FOR FUEL ETC.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnJetpackActivated, AActor*, InstigatorActor, ACHJetpack*, OwningJetpack, bool, bActivate); // NEED TO ADD ATTRIBUTES FOR FUEL ETC.
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -68,7 +68,7 @@ public:
 
 
 	UPROPERTY(BlueprintAssignable, Category = "Jetpack")
-	FOnJetpackActivate OnJetpackActivate;
+	FOnJetpackActivated OnJetpackActivated;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Jetpack")
 	ACHJetpack* MyJetpack;
@@ -90,8 +90,8 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 	bool bJetpackActive = false;
 	
-	UPROPERTY(BlueprintReadWrite)
-	bool bIsFlying = false;
+	//UPROPERTY(BlueprintReadWrite)
+	//bool bIsFlying = false;
 
 	UPROPERTY(BlueprintReadWrite)
 	bool bHasJumped = false;

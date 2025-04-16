@@ -21,7 +21,8 @@ void UCHCharacterMovementComponent::BeginPlay()
 
 void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iterations)
 {
- 	if (MyOwner->IsJetpackActive() && MyOwner->MyJetpack->IsThrusting()) // Example: your own jetpack flag
+	// If jetpack is on, character is flying
+ 	if (MyOwner->IsJetpackActive() && MyOwner->MyJetpack->IsThrusting() && MyOwner->MyJetpack->IsFlying())
 	{
 		SetMovementMode(MOVE_Flying);
 	}
@@ -32,11 +33,14 @@ void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iteration
 		return;
 	}
 
+
+	////// Smooth it out ///////////////////////////////////
+	
 	// Then move the character
 	FHitResult Hit;
-	
 
 	SafeMoveUpdatedComponent(Velocity * DeltaTime, UpdatedComponent->GetComponentRotation(), true, Hit);
+
 	// Apply gravity again for next frame
 	if (!HasValidData())
 	{

@@ -51,6 +51,13 @@ public:
 	//UPROPERTY(EditAnywhere, Category = "Jetpack|Speed")
 	float SpeedDefault = 400.0f;
 
+	// Represents our speed affected by BoostCharge
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
+	float BoostSpeed;
+
+	// Boost charge acceleration speed
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
+	float ThrustAccel = 0.1f;
 
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
 	float HoverAmplitude = 40.0f;
@@ -58,13 +65,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
 	float HoverFrequency = 4.0f;
 
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float ThrustAccel = 0.1f;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Thrust")
-	float BoostSpeed; // how fast thrust builds up
 
 
 
@@ -99,13 +99,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* DeactivateJetpackAction;
 
-
-
 	UPROPERTY(BlueprintReadOnly)
-	bool bJetpackActive = false;
-	
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsFlying = false;
+	bool bIsFlying = false;;
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsThrusting = false;
@@ -118,11 +113,10 @@ protected:
 
 	bool bInThrustFall = false;
 
-	// Within stable range - may not be needed
-	bool bWithinStableRange = false;
-
 	// Prevents inputs from being bound more than once
 	bool bJetpackInputBound = false;
+
+	bool bNegativeStability = false;
 
 	// 
 	float PrevStabilizeVelocity = 0.0;
@@ -139,14 +133,18 @@ protected:
 
 	FTimerHandle InputCheckDelayHandle;
 
-	virtual void BeginPlay() override;
+	UFUNCTION(BlueprintPure, Category = "Jetpack|Boost")
+	float GetBoostChargeAlpha() const;
 
 	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation
 	void OnActivateThrustTimer(APlayerController* Controller);
 
+	virtual void BeginPlay() override;
 
+	// Movement
 	void ThrustInitiate();
 
+	void ThrustUp();
 
 	void ThrustUpComplete();
 
@@ -158,40 +156,51 @@ protected:
 
 	void ThrustDownComplete();
 
+	void BoostInitiate();
+
 	void Boost();
 
 	void BoostComplete();
 
 	void Hover();
 
-	float GetCurrentFuel();
+	void Move(const FInputActionValue& Value);
 
-	bool HasFuel();
 
+	// Boost
 	void BoostChargeUp(float DeltaTime);
 
 	void BoostChargeDown(float DeltaTime);
 
-	UFUNCTION(BlueprintPure, Category = "Jetpack|Boost")
-	float GetBoostChargeAlpha() const;
+	// Attributes
+	float GetCurrentFuel();
 
-	void Move(const FInputActionValue& Value);
+	bool HasFuel();
+
 
 public:	
 
 	UFUNCTION(BlueprintCallable, Category = "JetPack")
 	void AttachJetpack(ACharacter* TargetCharacter);
 
-	UFUNCTION()
-	void OnJetpackActivate(AActor* IntigatorActor, ACHJetpack* Jetpack, bool bIsJetpackThrusting);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "JetPack")
+	void OnJetpackActivated(AActor* IntigatorActor, ACHJetpack* Jetpack, bool bActivated);
 
-	void JetpackDeactivate();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "JetPack")
+	void OnJetpackDeactivated();
 
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
 	bool IsThrusting();
 
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
 	bool IsStabilizing() { return bIsStabilizing; }
+
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	bool IsThrustingDown() { return bInThrustFall; }
+
+	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	bool IsFlying() { return bIsFlying; }
 
 	virtual void Tick(float DeltaTime) override;
 
-	void ThrustUp();
 };
