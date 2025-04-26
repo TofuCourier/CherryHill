@@ -48,38 +48,44 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
 	float BoostSpeedMin = 0.0f;
 
-	//UPROPERTY(EditAnywhere, Category = "Jetpack|Speed")
-	float SpeedDefault = 400.0f;
 
-	// Represents our speed affected by BoostCharge
+	/* Represents our speed affected by BoostCharge*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
 	float BoostSpeed;
 
-	// Boost charge acceleration speed
+	/* Boost charge acceleration speed*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
 	float ThrustAccel = 0.1f;
 
+	/* Hover Displacement */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
 	float HoverAmplitude = 40.0f;
 
+	/* Hover Speed */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Hover")
 	float HoverFrequency = 4.0f;
 
-
-
+	/* Default fly speed */
+	UPROPERTY(BlueprintReadOnly, Category = "Jetpack|Speed")
+	float SpeedDefault = 400.0f;
 
 protected:
 
 	UPROPERTY()
 	ACherryHillCharacter* OwningCharacter = nullptr;
 
+
+	/******  Components  *****/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeComp", meta = (AllowPrivateAccess = "true"))
 	UCHAttributeComponent* AttributeComp;
 
-	/** MappingContext */
+
+	/******  MappingContext  *****/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputMappingContext* FlyMappingContext;
 
+
+	/******  Input Actions  ******/
 	/** Thrust Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* ThrustUpAction;
@@ -99,84 +105,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* DeactivateJetpackAction;
 
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsFlying = false;;
 
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsThrusting = false;
+	/******  Attributes  ******/
 
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsBoosting = false;
+	UFUNCTION(BlueprintPure, Category = "Jetpack|Attributes")
+	float GetCurrentFuel();
 
-	UPROPERTY(BlueprintReadOnly)
-	bool bIsStabilizing = false;
-
-	bool bInThrustFall = false;
-
-	// Prevents inputs from being bound more than once
-	bool bJetpackInputBound = false;
-
-	bool bNegativeStability = false;
-
-	// 
-	float PrevStabilizeVelocity = 0.0;
-
-	float PrevDisplacement = 0.0f;
-
-	FVector SavedLateralVelocity = FVector::ZeroVector;
-
-	float HoverTargetZ = 0.0f; // Set when launching
-
-	float StabilizeVelocity = 0.0f;
-
-	float HoverTime = 0.0;
-
-	FTimerHandle InputCheckDelayHandle;
+	UFUNCTION(BlueprintPure, Category = "Jetpack|Attributes")
+	bool HasFuel();
 
 	UFUNCTION(BlueprintPure, Category = "Jetpack|Boost")
 	float GetBoostChargeAlpha() const;
 
-	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation
-	void OnActivateThrustTimer(APlayerController* Controller);
 
 	virtual void BeginPlay() override;
-
-	// Movement
-	void ThrustInitiate();
-
-	void ThrustUp();
-
-	void ThrustUpComplete();
-
-	void ThrustToHover();
-
-	void ThrustDownInitiate();
-
-	void ThrustDown();
-
-	void ThrustDownComplete();
-
-	void BoostInitiate();
-
-	void Boost();
-
-	void BoostComplete();
-
-	void Hover();
-
-	void Move(const FInputActionValue& Value);
-
-
-	// Boost
-	void BoostChargeUp(float DeltaTime);
-
-	void BoostChargeDown(float DeltaTime);
-
-	// Attributes
-	float GetCurrentFuel();
-
-	bool HasFuel();
-
 
 public:	
 
@@ -203,4 +145,75 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+private:
+
+	/****** Movement ******/
+	void ThrustInitiate();
+
+	void ThrustUp();
+
+	void ThrustUpComplete();
+
+	void ThrustToHover();
+
+	void ThrustDownInitiate();
+
+	void ThrustDown();
+
+	void ThrustDownComplete();
+
+	void BoostInitiate();
+
+	void Boost();
+
+	void BoostComplete();
+
+	void Hover();
+
+	void Move(const FInputActionValue& Value);
+
+
+	/****** Boost ******/
+	void BoostChargeUp(float DeltaTime);
+
+	void BoostChargeDown(float DeltaTime);
+
+
+	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation 
+	void OnActivateThrustTimer(APlayerController* Controller);
+
+private:
+
+	// The previous frames velocity
+	float PrevStabilizeVelocity = 0.0;
+
+	// When character is done thrusting/falling, set target Z to hover at
+	float HoverTargetZ = 0.0f; 
+
+	// How long actor has been hovering, Related to bobbing.
+	float HoverTime = 0.0;
+
+	// Jetpack is on and character is in the air
+	bool bIsFlying = false;;
+
+	// Actor is thrusting upwards
+	bool bIsThrusting = false;
+
+	// Actor is boosting forwards
+	bool bIsBoosting = false;
+
+	// Actor is stabilizing to a hover after thrusting
+	bool bIsStabilizing = false;
+
+	// Actor is descending quickly
+	bool bInThrustFall = false;
+
+	// Prevents inputs from being bound more than once
+	bool bJetpackInputBound = false;
+
+	// Smooth lateral velocity transitions when falling and thrusting
+	FVector SavedLateralVelocity = FVector::ZeroVector;
+
+	// Timer for 'OnActivateThrustTimer'
+	FTimerHandle InputCheckDelayHandle;
 };

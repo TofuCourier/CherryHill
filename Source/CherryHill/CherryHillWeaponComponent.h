@@ -46,8 +46,8 @@ public:
 	bool AttachWeapon(ACherryHillCharacter* TargetCharacter);
 
 	/** Make the weapon Fire a Projectile */
-	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void Fire();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="Weapon")
+	void OnFire();
 
 protected:
 	/** Ends gameplay for this component. */

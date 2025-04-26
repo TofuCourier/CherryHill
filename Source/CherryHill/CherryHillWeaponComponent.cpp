@@ -22,7 +22,7 @@ UCherryHillWeaponComponent::UCherryHillWeaponComponent()
 }
 
 
-void UCherryHillWeaponComponent::Fire()
+void UCherryHillWeaponComponent::OnFire_Implementation()
 {
 	// Check for Character
 	if (Character == nullptr || Character->GetController() == nullptr)
@@ -102,7 +102,7 @@ bool UCherryHillWeaponComponent::AttachWeapon(ACherryHillCharacter* TargetCharac
 		if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerController->InputComponent))
 		{
 			// Fire
-			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UCherryHillWeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UCherryHillWeaponComponent::OnFire);
 		}
 	}
 
