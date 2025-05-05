@@ -44,16 +44,37 @@ void UCherryHillWeaponComponent::OnFire_Implementation()
 		if (World != nullptr)
 		{
 			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-	
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-	
-			// Spawn the projectile at the muzzle
-			World->SpawnActor<ACherryHillProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			// Get camera viewpoint (for aiming)
+			FVector CameraLocation;
+			FRotator CameraRotation;
+			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+			FVector TraceStart = CameraLocation;
+			FVector TraceEnd = TraceStart + (CameraRotation.Vector() * 10000.0f);
+
+			FHitResult HitResult;
+			FCollisionQueryParams TraceParams;
+			TraceParams.AddIgnoredActor(Character);
+
+			FVector AimPoint = TraceEnd;
+			if (World->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, TraceParams))
+			{
+				AimPoint = HitResult.ImpactPoint;
+			}
+
+			// Get the muzzle
+			FVector SpawnLocation = DoesSocketExist("Muzzle")
+				? GetSocketLocation("Muzzle")
+				: GetComponentLocation();
+
+			// Calculate direction from muzzle to aim point
+			FVector AimDirection = (AimPoint - SpawnLocation).GetSafeNormal();
+			FRotator AimRotation = AimDirection.Rotation();
+
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+
+			World->SpawnActor<ACherryHillProjectile>(ProjectileClass, SpawnLocation, AimRotation, SpawnParams);
 		}
 	}
 	

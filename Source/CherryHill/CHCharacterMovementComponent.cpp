@@ -21,8 +21,8 @@ void UCHCharacterMovementComponent::BeginPlay()
 
 void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iterations)
 {
-	// If jetpack is on, character is flying
- 	if (MyOwner->IsJetpackActive() && MyOwner->MyJetpack->IsThrusting() && MyOwner->MyJetpack->IsFlying())
+	// If Jetpack is on, character is flying
+ 	if (MyOwner->IsJetpackActive() && MyOwner->MyJetpack->IsLaunching() && MyOwner->MyJetpack->IsFlying())
 	{
 		SetMovementMode(MOVE_Flying);
 	}
@@ -57,7 +57,7 @@ void UCHCharacterMovementComponent::PhysFalling(float DeltaTime, int32 Iteration
 void UCHCharacterMovementComponent::PhysFlying(float deltaTime, int32 Iterations)
 {
 	Super::PhysFlying(deltaTime, Iterations);
-	if (!MyOwner->MyJetpack->IsThrusting())
+	if (!MyOwner->MyJetpack->IsLaunching())
 	{
 		BrakingFrictionFactor = 10.0;
 		return;

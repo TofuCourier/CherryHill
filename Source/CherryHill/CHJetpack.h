@@ -28,7 +28,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Dampen")
 	float SpringDamping = 2.0f;
 
-	/* Current charge amount Thrusting/Boosting  @TODO Should this stay editable?*/
+	/* Current charge amount Thrusting/Boosting  - Currently editable for debugging*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Jetpack|Boost")
 	float BoostCharge = 0.5f;
 
@@ -47,7 +47,6 @@ public:
 	/* Min Speed when Boosting cm/s */
 	UPROPERTY(EditAnywhere, Category = "Jetpack|Boost")
 	float BoostSpeedMin = 0.0f;
-
 
 	/* Represents our speed affected by BoostCharge*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Jetpack|Boost")
@@ -72,38 +71,39 @@ public:
 protected:
 
 	UPROPERTY()
-	ACherryHillCharacter* OwningCharacter = nullptr;
+	TObjectPtr<ACherryHillCharacter> OwningCharacter = nullptr;
 
 
 	/******  Components  *****/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeComp", meta = (AllowPrivateAccess = "true"))
-	UCHAttributeComponent* AttributeComp;
+	TObjectPtr<UCHAttributeComponent> AttributeComp;
 
 
 	/******  MappingContext  *****/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputMappingContext* FlyMappingContext;
+	TObjectPtr<UInputMappingContext> FlyMappingContext;
 
 
 	/******  Input Actions  ******/
-	/** Thrust Input Action */
+	/* Ascending Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* ThrustUpAction;
+	TObjectPtr<UInputAction> AscendAction;
 
-	/** Thrust Input Action */
+	/* Descending Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* ThrustDownAction;
+	TObjectPtr<UInputAction> DescendAction;
 
-	/** Thrust Input Action */
+	/* Forwards Boost Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* BoostAction;
+	TObjectPtr<UInputAction> BoostAction;
 
+	/* Movement Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* MoveAction;
+	TObjectPtr<UInputAction> MoveAction;
 
-	/** Deactivate Input Action */
+	/* Deactivate Jetpack Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	UInputAction* DeactivateJetpackAction;
+	TObjectPtr<UInputAction> DeactivateJetpackAction;
 
 
 	/******  Attributes  ******/
@@ -131,16 +131,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "JetPack")
 	void OnJetpackDeactivated();
 
-	UFUNCTION(BlueprintCallable, Category = "JetPack")
-	bool IsThrusting();
+	UFUNCTION(BlueprintPure, Category = "JetPack")
+	bool IsLaunching() { return bIsBoosting || bIsAscending; };
 
-	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	UFUNCTION(BlueprintPure, Category = "JetPack")
 	bool IsStabilizing() { return bIsStabilizing; }
 
-	UFUNCTION(BlueprintCallable, Category = "JetPack")
-	bool IsThrustingDown() { return bInThrustFall; }
+	UFUNCTION(BlueprintPure, Category = "JetPack")
+	bool IsDescending() { return bIsDescending; }
 
-	UFUNCTION(BlueprintCallable, Category = "JetPack")
+	UFUNCTION(BlueprintPure, Category = "JetPack")
 	bool IsFlying() { return bIsFlying; }
 
 	virtual void Tick(float DeltaTime) override;
@@ -148,19 +148,19 @@ public:
 private:
 
 	/****** Movement ******/
-	void ThrustInitiate();
+	void InitiateAscend();
 
-	void ThrustUp();
+	void Ascend();
 
-	void ThrustUpComplete();
+	void AscendComplete();
 
-	void ThrustToHover();
+	void TransitionToHover();
 
-	void ThrustDownInitiate();
+	void InitiateDescend();
 
-	void ThrustDown();
+	void Descend();
 
-	void ThrustDownComplete();
+	void DescendComplete();
 
 	void BoostInitiate();
 
@@ -172,15 +172,13 @@ private:
 
 	void Move(const FInputActionValue& Value);
 
-
 	/****** Boost ******/
 	void BoostChargeUp(float DeltaTime);
 
 	void BoostChargeDown(float DeltaTime);
 
-
-	// On Jetpack activation allows the continuous thrust when inputs are being switched during Jump Activation 
-	void OnActivateThrustTimer(APlayerController* Controller);
+	// Allows the Jetpack to continue ascending when switching inputs 
+	void OnActivateHeldTimer(APlayerController* Controller);
 
 private:
 
@@ -197,7 +195,7 @@ private:
 	bool bIsFlying = false;;
 
 	// Actor is thrusting upwards
-	bool bIsThrusting = false;
+	bool bIsAscending = false;
 
 	// Actor is boosting forwards
 	bool bIsBoosting = false;
@@ -206,7 +204,7 @@ private:
 	bool bIsStabilizing = false;
 
 	// Actor is descending quickly
-	bool bInThrustFall = false;
+	bool bIsDescending = false;
 
 	// Prevents inputs from being bound more than once
 	bool bJetpackInputBound = false;

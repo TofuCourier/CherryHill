@@ -7,6 +7,10 @@
 #include "CherryHillWeaponComponent.generated.h"
 
 class ACherryHillCharacter;
+class ACherryHillProjectile;
+class UInputMappingContext;
+class UInputAction;
+class UInputAction;
 
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class CHERRYHILL_API UCherryHillWeaponComponent : public USkeletalMeshComponent
@@ -16,27 +20,27 @@ class CHERRYHILL_API UCherryHillWeaponComponent : public USkeletalMeshComponent
 public:
 	/** Projectile class to spawn */
 	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	TSubclassOf<class ACherryHillProjectile> ProjectileClass;
+	TSubclassOf<ACherryHillProjectile> ProjectileClass;
 
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
-	USoundBase* FireSound;
+	TObjectPtr<USoundBase> FireSound;
 	
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	UAnimMontage* FireAnimation;
+	TObjectPtr<UAnimMontage> FireAnimation;
+
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UInputMappingContext> FireMappingContext;
+
+	/** Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> FireAction;
 
 	/** Gun muzzle's offset from the characters location */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	FVector MuzzleOffset;
-
-	/** MappingContext */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* FireMappingContext;
-
-	/** Fire Input Action */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* FireAction;
 
 	/** Sets default values for this component's properties */
 	UCherryHillWeaponComponent();
@@ -56,5 +60,6 @@ protected:
 
 private:
 	/** The Character holding this weapon*/
-	ACherryHillCharacter* Character;
+
+	TObjectPtr<ACherryHillCharacter> Character;
 };
